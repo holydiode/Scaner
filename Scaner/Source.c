@@ -1,40 +1,48 @@
 #include <stdio.h>
-#include "lexemes.h"
 #include "Constant.h"
-#include "Macros.h"
-#include "string.h"
+#include "LXM.h"
 
+void listening(char* program_text, LXM* lexemes, int count_lexem, char* filename) {
+	int a = 0;
+	int b = 0;
+	char out_text[MAX_SIZ_LEXEM] = { 0 };
+	FILE* scanered_file;
 
-
+	fopen_s(&scanered_file, filename, "w");
+	if (scanered_file != NULL) {
+		for (int i = 0; i < count_lexem; i++) {
+			if (lexemes[i].end_move - lexemes[i].start_move > MAX_SIZ_LEXEM) {
+				out_text[0] = 'o';
+				out_text[1] = 0;
+			}
+			else {
+				get_text_lxms(program_text, out_text, lexemes[i]);
+			}
+			get_string_and_column(program_text, lexemes[i], &a, &b);
+			fprintf_s(scanered_file, "type: %30s |%30s | string: %4d | column: %4d |\n", get_lexem_name(lexemes[i].type_lexam), &out_text, b, a);
+		}
+		fclose(scanered_file);
+	}
+	else {
+		printf_s("error on write file %s", filename);
+	}
+}
 
 int main(int argc, char* argv[]) {
 
-	char keyword[20][CounLexem] = { "class", "public", "boolean", "double", "for", "true", "false"};
-	int keyword_lexem[CounLexem] = { t_class, t_am_public, t_bool, t_double, t_double, t_bool_true, t_bool_false};
-	
-	char buffer = 0;
-	char* start_identificator;
 
-	char program_text[MaxProgramSize] = {0};
-	char translate_result[MaxProgramSize] = {0};
+	char program_text[MAX_PROGRAMM_SIZE] = {0};
 
-	char* cur_point_in_text = &program_text;
-	char* cur_point_in_result = &translate_result;
 
-	char file_not_end;
-	
 	FILE* program_file;
 	FILE* scanered_file;
 
-	if (argc <= 3) {
-		printf_s("pleace input filenames");
+	if (argc < 2)
 		return 1;
-	}
 
-	int a = fopen_s(&program_file, argv[1], "r");
 	fopen_s(&program_file, argv[1], "r");
 	if (program_file != 0){
-		fread(program_text, 1, MaxProgramSize, program_file);
+		fread(program_text, 1, MAX_PROGRAMM_SIZE, program_file);
 		fclose(program_file);
 	}
 	else {
@@ -42,65 +50,22 @@ int main(int argc, char* argv[]) {
 		return 1;
 	}
 
+	LXM lexemes[MAX_PROGRAMM_SIZE] = {0};
+	int count_lexem = get_file_lxms(&program_text, &lexemes);
 
-
-	file_not_end = 1;
-
-	while (file_not_end) {
-		forget_letter(cur_point_in_text, is_ignore(*cur_point_in_text), is_ignore(*cur_point_in_text))
-		else
-		forget_letter(cur_point_in_text, *cur_point_in_text == '/' && *(cur_point_in_text + 1) == '/', *cur_point_in_text != '\n' && *cur_point_in_text != '\0')
-		else
-		not_limit_translation(cur_point_in_text, cur_point_in_result, is_number(*cur_point_in_text), is_number(*cur_point_in_text), t_number)
-		else
-		keyword_translation(
-			cur_point_in_text,
-			cur_point_in_result,
-			&buffer,
-			start_identificator,
-			is_latter(*cur_point_in_text),
-			is_latter(*cur_point_in_text) || is_number(*cur_point_in_text),
-			t_identificator,
-			keyword,
-			keyword_lexem,
-			CounLexem
-			)
-		else{
-			switch (*cur_point_in_text) {
-				simple_switch_translation(cur_point_in_result, '+', t_plus)
-				simple_switch_translation(cur_point_in_result, '-', t_minus)
-				simple_switch_translation(cur_point_in_result, '*', t_asterix)
-				simple_switch_translation(cur_point_in_result, '/', t_fraction)
-				simple_switch_translation(cur_point_in_result, '%', t_mod)
-				simple_switch_translation(cur_point_in_result, '~', t_plus)
-				simple_switch_translation(cur_point_in_result, '(', t_left_prnt)
-				simple_switch_translation(cur_point_in_result, ')', t_right_prnt)
-				simple_switch_translation(cur_point_in_result, '{', t_left_brack)
-				simple_switch_translation(cur_point_in_result, '}', t_right_brack)
-				simple_switch_translation(cur_point_in_result, '.', t_dot)
-				simple_switch_translation(cur_point_in_result, ',', t_com)
-				simple_switch_translation(cur_point_in_result, ';', t_semicolon)
-				fork_switch_translation(cur_point_in_text, cur_point_in_result, '=', t_assign, '=', t_equal)
-				fork_switch_translation(cur_point_in_text, cur_point_in_result, '<', t_less, '=', t_less_equal)
-				fork_switch_translation(cur_point_in_text, cur_point_in_result, '!', t_not, '=', t_not_equal)
-				fork_switch_translation(cur_point_in_text, cur_point_in_result, '>', t_more, '=', t_more_equal)
-				switch_endl(cur_point_in_result, t_end, file_not_end)
-				switch_error(cur_point_in_result,t_error)
-		}
-		cur_point_in_text++;
-	}
 
 	fopen_s(&scanered_file, argv[2], "w");
 	if (scanered_file != NULL) {
-		fputs(translate_result, scanered_file);
+		fwrite((void*)lexemes, sizeof(LXM), count_lexem, scanered_file);
 		fclose(scanered_file);
 	}
 	else {
 		printf_s("error on write file %s", argv[2]);
 		return 1;
 	}
+	
 
-	if (argc > 3)
-		for(char* ponter = &translate_result; *ponter != '\0'; ponter++)
-			printf_s("%d ", *ponter);
+	if (argc > 3) {
+		listening(program_text, lexemes, count_lexem, argv[3]);
+	}
 }
